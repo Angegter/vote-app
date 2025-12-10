@@ -1,42 +1,45 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom'; // Потрібно імпортувати useParams
-// Зверніть увагу: ми припускаємо, що ці імпорти доступні у вашому проекті
-import { api } from './api'; 
+import { useParams } from 'react-router-dom';
+import { api } from './api';
 import { cable } from './cable';
 import { Poll, Vote } from './types'; 
 
 function PollPage() {
-  // 1. Отримуємо ID голосування з URL
-function PollPage() {
-  // 1. Отримуємо ID голосування з URL
-  const { id } = useParams<{ id: string }>(); // Це рядок, наприклад '2'
+  const { id } = useParams<{ id: string }>(); 
   
-  // Парсимо його в число
-  const pollId = id ? parseInt(id) : null; 
-  
-  // При зміні ID, скидаємо попередній стан Poll
-  const [poll, setPoll] = useState<Poll | null>(null);
+  // Мы должны сбросить состояние, чтобы показать "Loading..." при смене ID
+  const [poll, setPoll] = useState<Poll | null>(null); 
+  const pollId = id ? parseInt(id) : null;
 
-  // 2. Завантаження даних голосування
-useEffect(() => {
-    if (!pollId) {
-      setPoll(null); // Якщо ID немає, очищаємо стан
-      return;
-    }
+  // 2. Загрузка данных голосования
+  useEffect(() => {
+    // 💡 1. Проверяем, что ID изменился и пришел в useEffect
+    console.log(`useEffect triggered with Poll ID: ${pollId}`);
     
-    // Скидаємо стан перед новим запитом, щоб показати, що дані змінюються
+    if (!pollId) return;
+
+    // 💡 2. СБРОС СОСТОЯНИЯ: Очищаем старые данные, чтобы показать "Loading..."
+    // Это гарантирует, что мы не будем отображать Poll 1, когда пытаемся загрузить Poll 2.
     setPoll(null); 
     
+    // 3. Отправляем новый запрос
     api.get<Poll>(`/polls/${pollId}`)
-      .then((res) => setPoll(res.data))
-      .catch((error) => console.error("Error fetching poll data:", error));
+      .then((res) => {
+        setPoll(res.data);
+        console.log(`Successfully loaded Poll ID: ${pollId}`);
+      })
+      .catch((error) => console.error(`Failed to load Poll ID ${pollId}:`, error));
       
-  }, [pollId]);
+  }, [pollId]); // Зависимость от pollId гарантирует, что эффект сработает при смене ID
 
-  // 3. Підписка на ActionCable
+  // ... (Остальная логика подписки и голосования остается без изменений)
+
+  // 3. Подписка на ActionCable
   useEffect(() => {
     if (!poll) return;
-
+    
+    // Отписываемся от старого ID и подписываемся на новый,
+    // когда состояние poll обновится новым объектом.
     const subscription = cable.subscriptions.create(
       { channel: 'PollChannel', poll_id: poll.id },
       {
@@ -49,24 +52,26 @@ useEffect(() => {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+        console.log(`Unsubscribing from Poll ID: ${poll.id}`);
+        subscription.unsubscribe();
+    }
   }, [poll?.id]);
 
-  // 4. Логіка голосування
+  // 4. Логика голосования и подсчета... (остается без изменений)
+
   const handleVote = (option: string) => {
     api.post('/votes', {
       vote: { poll_id: poll?.id, option },
     });
   };
 
-  // 5. Логіка підрахунку голосів
   const getCount = (option: string) =>
     poll?.votes.filter((v) => v.option === option).length ?? 0;
 
   if (!poll) return <p>Loading...</p>;
 
-  // Опції для голосування беремо з votes, як було в оригіналі
-  // (Хоча зазвичай їх беруть з poll.options, як в API)
+  // Опции для голосования берем из votes, как было в оригинале
   const uniqueOptions = Array.from(new Set(poll.votes.map((v) => v.option)));
 
   return (
@@ -83,6 +88,4 @@ useEffect(() => {
   );
 }
 
-
 export default PollPage;
-
