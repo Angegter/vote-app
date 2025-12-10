@@ -18,10 +18,19 @@ function PollPage() {
   const [poll, setPoll] = useState<Poll | null>(null);
 
   // 2. Завантаження даних голосування
-  useEffect(() => {
-    if (!pollId) return;
-    // Використовуємо отриманий ID замість захардкодженого '1'
-    api.get<Poll>(`/polls/${pollId}`).then((res) => setPoll(res.data));
+useEffect(() => {
+    if (!pollId) {
+      setPoll(null); // Якщо ID немає, очищаємо стан
+      return;
+    }
+    
+    // Скидаємо стан перед новим запитом, щоб показати, що дані змінюються
+    setPoll(null); 
+    
+    api.get<Poll>(`/polls/${pollId}`)
+      .then((res) => setPoll(res.data))
+      .catch((error) => console.error("Error fetching poll data:", error));
+      
   }, [pollId]);
 
   // 3. Підписка на ActionCable
@@ -76,3 +85,4 @@ function PollPage() {
 
 
 export default PollPage;
+
