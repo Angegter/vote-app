@@ -7,9 +7,15 @@ import { Poll, Vote } from './types';
 
 function PollPage() {
   // 1. Отримуємо ID голосування з URL
-  const { id } = useParams<{ id: string }>(); 
+function PollPage() {
+  // 1. Отримуємо ID голосування з URL
+  const { id } = useParams<{ id: string }>(); // Це рядок, наприклад '2'
+  
+  // Парсимо його в число
+  const pollId = id ? parseInt(id) : null; 
+  
+  // При зміні ID, скидаємо попередній стан Poll
   const [poll, setPoll] = useState<Poll | null>(null);
-  const pollId = id ? parseInt(id) : null;
 
   // 2. Завантаження даних голосування
   useEffect(() => {
@@ -67,5 +73,6 @@ function PollPage() {
     </div>
   );
 }
+
 
 export default PollPage;
